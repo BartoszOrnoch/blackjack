@@ -1,18 +1,23 @@
 class Player {
-    constructor(num) {
+    constructor(num, isBot = false) {
         this.hand = [];
         this.points = 0;
         this.name = 'player' + (num + 1).toString();
-        this.number = num;
         this.state = 'playing';
+        if (isBot) { this.isBot = true; } else { this.isBot = false; };
     }
 }
 
 class Game {
     constructor(numberOfPlayers) {
         this.players = [];
-        for (let number of [...Array(numberOfPlayers).keys()]) {
-            this.players.push(new Player(number));
+        if (numberOfPlayers === 1) {
+            this.players = [new Player(0), new Player(1, true)];
+        }
+        else {
+            for (let number of [...Array(numberOfPlayers).keys()]) {
+                this.players.push(new Player(number));
+            }
         }
         this.playerNumber = 0;
         this.currentPlayer = this.players[this.playerNumber];
@@ -59,15 +64,37 @@ class Game {
             this.pickWinner();
             return false;
         }
+        else if (this.checkIfEveryoneElseLost()) {
+            this.currentPlayer = this.players[this.playerNumber];
+            this.currentPlayer.state = 'won';
+            this.drawPlayerBoard();
+            return false;
+        }
         else {
-            console.log(this.playerNumber);
             this.currentPlayer = this.players[this.playerNumber];
             return true;
         }
     }
 
     pickWinner() {
-        console.log('pick Winner');
+        let maxPoints = 0;
+        for (let player of this.players) {
+            if (player.state === 'pending' && player.points > maxPoints) {
+                maxPoints = player.points;
+                this.currentPlayer = player;
+            }
+        }
+        this.currentPlayer.state = 'won';
+        this.drawPlayerBoard();
+        this.endGame();
+    }
+
+    checkIfEveryoneElseLost() {
+        return this.players.filter(element => element.state !== 'lost').length === 1;
+    }
+
+    endGame() {
+
     }
 
     checkIfPlyerLost() {
@@ -81,20 +108,26 @@ class Game {
     playerDrawsCard(count = 1) {
         this.fetchCard(count).then(() => {
             this.updatePoints();
-            if (this.checkIfPlyerLost()) {
+
+            if (this.checkIfPlayerWon()) {
+                console.log('wygrana');
+                this.currentPlayer.state = 'won'
+                this.drawPlayerBoard();
+                this.endGame();
+            }
+
+            else if (this.checkIfPlyerLost()) {
                 console.log('przegrana');
                 this.currentPlayer.state = 'lost';
                 this.drawPlayerBoard();
                 if (this.selectNextPlayer()) {
-                    this.playerDrawsCard(2);
-                    this.drawPlayerBoard();
+                    if (this.currentPlayer.isBot) {
+                        this.automaticBotPlay();
+                    }
+                    else {
+                        this.playerDrawsCard(2);
+                    }
                 }
-
-            }
-            else if (this.checkIfPlayerWon()) {
-                console.log('wygrana');
-                this.currentPlayer.state = 'won'
-                this.drawPlayerBoard();
             }
             else {
                 this.drawPlayerBoard();
@@ -102,12 +135,45 @@ class Game {
         });
     }
 
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+
+    automaticBotPlay() {
+        this.fetchCard(1).then(() => {
+            this.updatePoints();
+            this.drawPlayerBoard();
+            this.sleep(1000).then(() => {
+                if (this.checkIfPlyerLost()) {
+                    this.currentPlayer.state = 'lost'
+                    this.currentPlayer = this.players[0];
+                    this.drawPlayerBoard();
+                }
+
+                else if (this.checkIfPlayerWon() || this.currentPlayer.points > this.players[0].points) {
+                    this.currentPlayer.state = 'won'
+                    this.drawPlayerBoard();
+                    this.endGame();
+                }
+
+                else {
+                    this.automaticBotPlay();
+                }
+            });
+        });
+    }
+
     playerPasses() {
         this.currentPlayer.state = 'pending';
         this.drawPlayerBoard();
         if (this.selectNextPlayer()) {
-            console.log('spasowano');
-            this.playerDrawsCard(2);
+            if (this.currentPlayer.isBot) {
+                this.automaticBotPlay();
+            }
+            else {
+                this.playerDrawsCard(2);
+            }
         }
     }
 
@@ -158,9 +224,14 @@ class Game {
         }
         document.body.appendChild(playerBoardDiv);
     }
+
+    drawMainMenu() {
+        this.drawButton('Play')
+    }
 }
 
 
 
 const game1 = new Game(4);
 game1.fetchDeck().then(() => { game1.playerDrawsCard(2) });
+
