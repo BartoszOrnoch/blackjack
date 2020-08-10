@@ -4,7 +4,7 @@ Simple game similar to Blackjack written in pure JavaScript. It supports two mod
     - vsComputer: user plays versus bot
     - multiplayer: 2-4 players fight between each other
 
-To play the game fork/download project and run index.html in your internet browser.
+To play the game clone/download the project and run index.html file in your internet browser.
 
 Project uses free API -> https://deckofcardsapi.com/. Whole game's logic relies on two objects: Game and Player. Shown below there is description of their properties and methods.
 
